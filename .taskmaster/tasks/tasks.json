@@ -1,0 +1,143 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Setup Project Repository and Environment",
+        "description": "Initialize the project repository and set up the Python environment with necessary dependencies.",
+        "details": "1. Create a new Git repository\n2. Initialize a Python virtual environment\n3. Create a requirements.txt file with initial dependencies: PyMuPDF (fitz), pandas\n4. Set up a basic project structure with main script (extract_tool.py) and modules\n5. Create a .gitignore file for Python projects",
+        "testStrategy": "Verify that the repository is created, virtual environment is working, and all dependencies can be installed without errors.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Implement PDF Text Extraction Module",
+        "description": "Create a module to extract text from PDF files using PyMuPDF (fitz) library.",
+        "details": "1. Create a new module 'pdf_extractor.py'\n2. Implement a function 'extract_text(pdf_path)' that:\n   - Opens the PDF file\n   - Extracts text from each page\n   - Returns the extracted text as a string\n3. Handle potential exceptions (file not found, corrupted PDF)",
+        "testStrategy": "Create unit tests with sample PDFs to ensure accurate text extraction. Include tests for various PDF layouts and potential error cases.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Develop Text Analysis and Matching Module",
+        "description": "Create a module to identify and match questions and explanations from the extracted text.",
+        "details": "1. Create a new module 'text_analyzer.py'\n2. Implement functions:\n   - identify_questions(text): Use regex to find patterns like 'number + (dot) + space'\n   - identify_explanations(text): Find paragraphs starting with the same number as questions\n   - match_questions_explanations(questions, explanations): Pair questions with their explanations\n3. Create an ExtractedItem class/dict with 'problem_text' and 'explanation_text' fields\n4. Implement main function 'analyze_text(text)' that returns a list of ExtractedItem objects",
+        "testStrategy": "Create unit tests with various text patterns to ensure accurate identification and matching of questions and explanations. Include edge cases and potential error scenarios.",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Implement CSV Generator Module",
+        "description": "Create a module to convert extracted data into CSV format and save it to a file.",
+        "details": "1. Create a new module 'csv_generator.py'\n2. Implement a function 'save_to_csv(data, output_path)' that:\n   - Takes a list of ExtractedItem objects\n   - Creates a CSV file with 'problem_text' and 'explanation_text' columns\n   - Writes the data to the specified output path\n3. Use the csv module for writing CSV files\n4. Ensure proper encoding (UTF-8) and error handling",
+        "testStrategy": "Create unit tests to verify correct CSV generation with various input data. Check for proper encoding, column names, and data integrity.",
+        "priority": "medium",
+        "dependencies": [
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Develop Main CLI Script",
+        "description": "Create the main script that integrates all modules and handles command-line arguments.",
+        "details": "1. Create 'extract_tool.py' as the main script\n2. Implement argument parsing for input PDF path and output CSV path\n3. Create a main function that:\n   - Calls pdf_extractor to get text\n   - Passes text to text_analyzer\n   - Sends analyzed data to csv_generator\n4. Implement proper error handling and user feedback\n5. Add a simple progress indicator for long-running operations",
+        "testStrategy": "Create integration tests that run the script with various input PDFs and verify the correctness of the output CSV. Test error scenarios like missing files or invalid arguments.",
+        "priority": "high",
+        "dependencies": [
+          2,
+          3,
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Implement Basic Logging and Error Reporting",
+        "description": "Add logging functionality to track the extraction process and report errors.",
+        "details": "1. Import Python's logging module\n2. Set up basic logging configuration in the main script\n3. Add log statements for key operations (file opening, text extraction, analysis, CSV writing)\n4. Implement error logging for exceptions\n5. Ensure logs are written to both console and a log file",
+        "testStrategy": "Run the script with various scenarios and verify that appropriate log messages are generated. Check both console output and log file contents.",
+        "priority": "medium",
+        "dependencies": [
+          5
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Optimize for Large File Processing",
+        "description": "Improve memory usage and processing speed for large PDF files.",
+        "details": "1. Implement page-by-page processing instead of loading entire PDF into memory\n2. Use generators where applicable to reduce memory usage\n3. Implement batch processing for very large files\n4. Add a memory usage tracker to monitor performance\n5. Optimize regex patterns and text analysis algorithms",
+        "testStrategy": "Test with large PDF files (100+ pages) and monitor memory usage and processing time. Compare performance before and after optimization.",
+        "priority": "medium",
+        "dependencies": [
+          5
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Enhance Pattern Recognition for Various Layouts",
+        "description": "Extend regular expressions and heuristic rules to handle more diverse question-explanation layouts.",
+        "details": "1. Analyze various PDF layouts and identify common patterns\n2. Extend regex patterns to handle sub-items (e.g., ㄱ, ㄴ, ㄷ choices)\n3. Implement context-based rules for more accurate matching\n4. Add support for multi-column layouts\n5. Implement a fallback mechanism for unrecognized patterns",
+        "testStrategy": "Create a diverse set of test PDFs with various layouts. Verify that the enhanced pattern recognition correctly extracts questions and explanations from all layouts.",
+        "priority": "medium",
+        "dependencies": [
+          3,
+          5
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Implement Configuration File Support",
+        "description": "Add support for external configuration files to manage question/explanation recognition rules.",
+        "details": "1. Create a default configuration file (JSON or YAML) with recognition rules\n2. Implement a configuration loader module\n3. Modify the text analysis module to use loaded configurations\n4. Add a command-line option to specify a custom configuration file\n5. Implement validation for configuration file format and content",
+        "testStrategy": "Create multiple configuration files with different rules. Test the script with each configuration and verify that the extraction behavior changes accordingly.",
+        "priority": "low",
+        "dependencies": [
+          5,
+          8
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Add Basic Text Preprocessing Options",
+        "description": "Implement optional text preprocessing features for extracted text.",
+        "details": "1. Implement functions for common preprocessing tasks:\n   - Whitespace removal\n   - Special character normalization\n   - Basic text cleaning (e.g., removing page numbers)\n2. Add command-line options to enable/disable each preprocessing feature\n3. Integrate preprocessing into the main extraction flow\n4. Ensure preprocessing doesn't interfere with pattern recognition",
+        "testStrategy": "Create test cases for each preprocessing option. Verify that preprocessing improves text quality without losing important information or breaking pattern recognition.",
+        "priority": "low",
+        "dependencies": [
+          5
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-06-27T14:17:00.097Z",
+      "updated": "2025-06-27T14:21:13.456Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

@@ -1,0 +1,135 @@
+# Overview
+This product is a Python-based CLI (Command-Line Interface) tool that automatically extracts questions and their corresponding explanations from PDF learning materials and converts them into CSV format. Learning data analysts can use this tool to easily extract structured question-explanation data from a large volume of PDF documents and utilize the extracted data as a source for Natural Language Processing (NLP) analysis. The goal is to dramatically reduce the time spent on manual data collection and cleaning, allowing analysts to focus on core analytical tasks.
+
+# Core Features
+**PDF Text Extraction (Core):**
+
+-   **What it does:** Accurately extracts non-image-based text data from the input PDF file.
+-   **Why it's important:** By directly using the original text without an OCR process, it enables fast and efficient processing without data loss. This is essential for improving the accuracy of subsequent NLP analysis.
+-   **How it works at a high level:** It uses a Python PDF parsing library to directly read the text layer of the PDF document and extract text on a page-by-page basis.
+
+**Automatic Recognition of Question and Explanation Areas:**
+
+-   **What it does:** Automatically distinguishes and matches the question parts and the corresponding explanation parts within the extracted text. The answer key section is excluded from the extraction.
+-   **Why it's important:** It saves data preprocessing time by automatically providing structured question-explanation pairs, eliminating the need for analysts to separate the data manually. It generates the fundamental data units for NLP analysis.
+-   **How it works at a high level:** It analyzes text patterns (e.g., numbers like "01", "02", keywords like "Explanation", paragraph structure, indentation, etc.) and infers the correlation by identifying the start and end points of questions and explanations based on the structure of previously provided examples.
+
+**CSV Conversion and Storage:**
+
+-   **What it does:** Converts the identified question and explanation data into CSV file format and saves it to a specified path.
+-   **Why it's important:** CSV is one of the most universal data formats, making it easy to load and use as data for NLP analysis in Python scripts, R, Excel, and various database systems.
+-   **How it works at a high level:** It maps the extracted question text and explanation text to separate columns, respectively, and organizes each question-explanation pair as a single row to output as a CSV file.
+
+# User Experience
+**User Persona:**
+
+-   **Learning Data Analyst (Researcher Lee, 30s):** A user who wants to extract question and explanation text from a large number of educational PDF files to perform NLP model training or statistical analysis. They are familiar with the CLI environment and prioritize data accuracy and processing efficiency. They prefer a concise tool that can be integrated into scripts or automated pipelines rather than a visual UI.
+
+**Key User Flow:**
+
+1.  **Tool Installation:** Install the tool via Python pip.
+2.  **Command Execution:** Run a command in the terminal like `python extract_tool.py <PDF_file_path> <output_CSV_file_path>`.
+3.  **Result Verification:** After execution, check the CSV file created at the specified path.
+
+**UI/UX Considerations:**
+
+-   **CLI-based:** No web UI is provided; all interactions are through the command line.
+-   **Clear Arguments:** Required inputs (PDF path, output CSV path) are clearly defined as command-line arguments.
+-   **Progress and Error Messages:** Concise messages are printed to the terminal when file processing starts, completes, or an error occurs, allowing the user to track the status.
+
+# Technical Architecture
+**System Components:**
+
+-   **Main CLI Script:** The main Python script (extract_tool.py) that the user will run. Handles command-line argument parsing and overall flow control.
+-   **PDF Parser Module:** The core module for extracting text from PDF files (Utilizing Python libraries: PyMuPDF (fitz) is recommended for stability and speed, or pdfminer.six).
+-   **Text Analysis & Matching Module:** Logic for identifying and matching questions and explanations from the extracted text. Primarily uses rule-based pattern matching (utilizing the `re` module).
+-   **CSV Generator:** A module for converting the extracted data into CSV format and writing it to a file (utilizing the `csv` module).
+
+**Data Models:**
+
+-   **ExtractedItem Class/Dict:**
+    -   `problem_text`: String (Extracted question text)
+    -   `explanation_text`: String (Extracted explanation text)
+
+**APIs and Integrations:**
+
+-   No separate web API is provided. It consists purely of Python libraries and scripts.
+
+**Infrastructure Requirements:**
+
+-   **Python 3.x Environment:** Python runtime for script execution.
+-   **Installed Python Libraries:** PyMuPDF (or pdfminer.six, etc.), pandas (useful for CSV handling), and other NLP-related libraries if necessary (initially not required).
+
+# Development Roadmap
+**MVP Requirements:**
+
+-   **PDF Text Extraction:** Accurately extract text from a given PDF path and load it into memory or a temporary file. OCR functionality is not included.
+-   **Rule-based Question/Explanation Separation and Matching:**
+    -   Implement parsing logic to identify question-explanation pairs based on the provided example PDF structure (question numbers, subunits, explanation content).
+    -   Ignore answer key notations (e.g., 01 ② 02 ④ ...) and extract only the question number and the body of the explanation.
+-   **CSV Conversion and Storage:** Create a CSV file containing the extracted questions (column 1) and explanations (column 2) at the specified path.
+-   **CLI Interface:** A Python script that takes a PDF input path and a CSV output path as arguments to run.
+
+**Future Enhancements:**
+
+-   **Advanced Pattern Recognition:** Extend regular expressions and heuristic rules to handle various test booklet layouts (e.g., multi-column editing, questions containing tables).
+-   **Large File Processing Optimization:** Improve memory usage and processing speed.
+-   **Parsing Logs and Error Reporting:** Detailed logging and reporting for issues during the extraction process (e.g., parsing failure on a specific page).
+-   **Configuration File Support:** Provide flexibility by managing question/explanation recognition rules in an external configuration file (JSON/YAML).
+-   **Text Preprocessing Options:** Offer basic preprocessing options for extracted text (e.g., whitespace removal, special character normalization).
+
+# Logical Dependency Chain
+**Foundation (Build First):**
+
+-   **Core PDF Text Extraction Module:** The most crucial function to read a PDF file and extract all text sequentially.
+-   **Basic Text Line/Paragraph Separation Logic:** A function to split the extracted text into meaningful units (lines, paragraphs).
+
+**Getting to Something Usable (Minimal Viable Product):**
+
+-   **Question/Explanation Pattern Recognition (MVP):** Initial rule implementation to distinguish and match lines starting with a "question number" and the subsequent "explanation" text block based on the example PDF structure.
+-   **CSV Writing Function:** Implement functionality to convert a list of `ExtractedItem` objects into a CSV file and save it.
+-   **CLI Script:** Write the main script that takes a PDF path, calls the above modules, and outputs a CSV (so the user can run it like `python script.py input.pdf output.csv`).
+
+**Properly Pacing and Scoping Each Feature (Incremental Improvement):**
+
+-   **Advanced Pattern Recognition:** Add regular expressions and context-based rules to handle more diverse question-explanation layouts (e.g., handling sub-items like ㄱ, ㄴ, ㄷ choices).
+-   **Robust Exception Handling:** Add solid logic to handle various exceptional situations like non-existent files, corrupted PDFs, and unexpected text structures.
+-   **Performance Improvement:** Optimization to resolve memory and speed issues that may arise when processing large PDFs.
+
+# Risks and Mitigations
+**Technical Challenges:**
+
+-   **Handling Various PDF Layouts:** The layout of questions and explanations (line breaks, indentation, font size changes, etc.) can vary greatly between PDFs, making accurate separation difficult with rules alone.
+    -   **Mitigation:** Initially, focus on a standardized pattern like the provided example to implement the MVP. Subsequently, acquire various PDF samples that learning data analysts will actually use to continuously refine the rule-based logic. If necessary, consider simple statistical text classification techniques (e.g., feature extraction based on TF-IDF followed by SVM/Logistic Regression classification).
+-   **PDF Parsing Library Limitations:** Some PDFs may have parsing errors, such as jumbled text order or the inclusion of hidden text during extraction.
+    -   **Mitigation:** Prioritize the use of stable and widely-used libraries like PyMuPDF. If a problem occurs with a specific PDF, analyze its structure to customize the parsing logic or clearly communicate the error message to the user to guide manual intervention.
+
+**Figuring out the MVP that we can build upon:**
+
+-   It can be difficult to judge how useful a tool can be with minimal functionality.
+    -   **Mitigation:** Focus only on the three core functions: PDF text extraction, rule-based question-explanation separation, and CSV storage. Completely exclude features like a web UI, OCR, and complex NLP model integration from the initial scope to shorten the development period and focus on meeting the most basic needs of learning data analysts.
+
+**Resource Constraints:**
+
+-   As it will be developed as a simple Python script, constraints on development personnel and time are expected to be relatively low.
+    -   **Mitigation:** Maximize development efficiency by fully utilizing the rich open-source libraries of the Python ecosystem (PDF parsers, CSV handlers).
+
+# Appendix
+**Research Findings:**
+
+-   **PDF Text Extraction:** PyMuPDF (fitz) is excellent in terms of speed and accuracy for extracting text from PDFs and is useful for analyzing complex layouts as it provides location information of text blocks.
+-   **Question/Explanation Pattern Analysis:** Educational content PDFs tend to use explicit keywords like question numbers and "Explanation," as well as consistent paragraph structures, allowing for sufficiently high accuracy with regular expressions and paragraph-level analysis.
+-   **CSV Usability:** CSV is a very efficient intermediate data format in the first stage (data collection/refinement) of an NLP analysis pipeline.
+
+**Technical Specifications:**
+
+-   **Input File Format:** PDF (.pdf)
+-   **Output File Format:** CSV (.csv)
+-   **CSV Column Configuration:** `problem_text`, `explanation_text`
+-   **Text Encoding:** UTF-8
+
+**Question/Explanation Separation Logic (Initial):**
+
+-   **Start of Question:** Find a pattern of `number + (dot) + space + ...` (e.g., "01 Characteristics of Life") within a page, and consider the subsequent text as the question body.
+-   **Start of Explanation:** Find a paragraph starting with the same number as the question number (e.g., an explanation paragraph starting with "01 Characteristics of Life" following the question "01 Characteristics of Life"), and consider the text from that paragraph to the start of the next question as the explanation text.
+-   Answer key notations (e.g., 01 ② 02 ④ ...) are ignored during parsing or lines containing such patterns are excluded during explanation extraction.
