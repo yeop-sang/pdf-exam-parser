@@ -3,6 +3,7 @@ import logging
 from modules.pdf_extractor import extract_pages
 from modules.text_analyzer import analyze_text
 from modules.csv_generator import save_to_csv
+from modules.text_preprocessor import clean_text
 
 def main():
     """
@@ -20,6 +21,7 @@ def main():
     parser = argparse.ArgumentParser(description="Extract problems and explanations from a PDF file.")
     parser.add_argument("pdf_path", help="The path to the input PDF file.")
     parser.add_argument("output_path", help="The path to the output CSV file.")
+    parser.add_argument("--preprocess", action="store_true", help="Enable text preprocessing.")
     args = parser.parse_args()
 
     logging.info(f"Processing {args.pdf_path}...")
@@ -28,6 +30,11 @@ def main():
         # Step 1: Extract text from PDF page by page
         logging.info("Step 1/3: Creating text stream from PDF...")
         page_stream = extract_pages(args.pdf_path)
+
+        # Optional Step: Preprocess the text stream
+        if args.preprocess:
+            logging.info("Applying text preprocessing...")
+            page_stream = (clean_text(page) for page in page_stream)
 
         # Step 2: Analyze the stream to find items
         logging.info("Step 2/3: Analyzing text stream...")

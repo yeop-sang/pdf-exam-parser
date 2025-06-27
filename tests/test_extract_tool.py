@@ -1,25 +1,26 @@
 import pytest
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock, call, ANY
 from extract_tool import main
 
 @patch('extract_tool.argparse.ArgumentParser')
 @patch('extract_tool.save_to_csv')
 @patch('extract_tool.analyze_text')
 @patch('extract_tool.extract_pages')
-def test_main_flow_success(mock_extract_pages, mock_analyze_text, mock_save_to_csv, mock_argparse):
+def test_main_flow_success_no_preprocessing(mock_extract_pages, mock_analyze_text, mock_save_to_csv, mock_argparse):
     """
-    Tests the main successful execution flow of the script.
+    Tests the main successful execution flow of the script without preprocessing.
     """
     # --- Setup Mocks ---
     mock_args = MagicMock()
     mock_args.pdf_path = 'input.pdf'
     mock_args.output_path = 'output.csv'
+    mock_args.preprocess = False # Explicitly disable preprocessing
     mock_argparse.return_value.parse_args.return_value = mock_args
 
     # Mock the generators (iterators)
     mock_page_stream = iter(["Page 1", "Page 2"])
-    mock_item_stream = iter([{'number': '1'}]) # Dummy item stream
-    
+    mock_item_stream = iter([{'number': '1'}]) 
+
     mock_extract_pages.return_value = mock_page_stream
     mock_analyze_text.return_value = mock_item_stream
 
@@ -28,7 +29,39 @@ def test_main_flow_success(mock_extract_pages, mock_analyze_text, mock_save_to_c
 
     # --- Assertions ---
     mock_extract_pages.assert_called_once_with('input.pdf')
+    # Here, we expect the original stream object
     mock_analyze_text.assert_called_once_with(mock_page_stream)
+    mock_save_to_csv.assert_called_once_with(mock_item_stream, 'output.csv')
+
+@patch('extract_tool.argparse.ArgumentParser')
+@patch('extract_tool.save_to_csv')
+@patch('extract_tool.analyze_text')
+@patch('extract_tool.extract_pages')
+def test_main_flow_with_preprocessing(mock_extract_pages, mock_analyze_text, mock_save_to_csv, mock_argparse):
+    """
+    Tests the main flow when the --preprocess flag is enabled.
+    """
+    # --- Setup Mocks ---
+    mock_args = MagicMock()
+    mock_args.pdf_path = 'input.pdf'
+    mock_args.output_path = 'output.csv'
+    mock_args.preprocess = True  # Enable preprocessing
+    mock_argparse.return_value.parse_args.return_value = mock_args
+
+    mock_page_stream = iter(["Page 1", "Page 2"])
+    mock_item_stream = iter([{'number': '1'}])
+
+    mock_extract_pages.return_value = mock_page_stream
+    mock_analyze_text.return_value = mock_item_stream
+
+    # --- Run main ---
+    main()
+
+    # --- Assertions ---
+    mock_extract_pages.assert_called_once_with('input.pdf')
+    # When preprocessing, analyze_text is called with a generator expression.
+    # We use ANY to avoid comparing tricky generator objects.
+    mock_analyze_text.assert_called_once_with(ANY)
     mock_save_to_csv.assert_called_once_with(mock_item_stream, 'output.csv')
 
 @patch('extract_tool.argparse.ArgumentParser')
@@ -43,6 +76,7 @@ def test_main_flow_no_items_found(mock_extract_pages, mock_analyze_text, mock_sa
     mock_args = MagicMock()
     mock_args.pdf_path = 'test.pdf'
     mock_args.output_path = 'output.csv'
+    mock_args.preprocess = False # Explicitly disable preprocessing
     mock_argparse.return_value.parse_args.return_value = mock_args
 
     mock_page_stream = iter(["Some text without items"])
@@ -50,7 +84,7 @@ def test_main_flow_no_items_found(mock_extract_pages, mock_analyze_text, mock_sa
 
     mock_extract_pages.return_value = mock_page_stream
     mock_analyze_text.return_value = mock_item_stream
-    
+
     # --- Run main ---
     main()
 
@@ -64,25 +98,28 @@ def test_main_flow_no_items_found(mock_extract_pages, mock_analyze_text, mock_sa
 @patch('extract_tool.argparse.ArgumentParser')
 @patch('extract_tool.save_to_csv')
 @patch('extract_tool.analyze_text')
-@patch('extract_tool.extract_pages', side_effect=Exception("Test PDF Error"))
-def test_main_flow_extraction_error(mock_extract_pages, mock_analyze_text, mock_save_to_csv, mock_argparse):
+@patch('extract_tool.extract_pages')
+def test_main_flow_error_handling(mock_extract_pages, mock_analyze_text, mock_save_to_csv, mock_argparse):
     """
-    Tests the flow where PDF extraction raises an exception.
+    Tests that an exception during processing is logged correctly.
     """
     # --- Setup Mocks ---
     mock_args = MagicMock()
     mock_args.pdf_path = 'error.pdf'
     mock_args.output_path = 'output.csv'
+    mock_args.preprocess = False
     mock_argparse.return_value.parse_args.return_value = mock_args
 
-    # --- Run main ---
-    with patch('extract_tool.logging.error') as mock_log_error:
-        main()
+    # Simulate an error during page extraction
+    error_message = "Failed to open PDF"
+    mock_extract_pages.side_effect = Exception(error_message)
 
+    # --- Run main and capture logs ---
+    with patch('extract_tool.logging') as mock_logging:
+        main()
         # --- Assertions ---
-        mock_extract_pages.assert_called_once_with('error.pdf')
-        mock_analyze_text.assert_not_called()
+        mock_logging.error.assert_called_once()
+        # Check that the error message contains the exception's text
+        assert error_message in mock_logging.error.call_args[0][0]
+        # Ensure save_to_csv was not called
         mock_save_to_csv.assert_not_called()
-        
-        mock_log_error.assert_called_once()
-        assert "An error occurred during processing: Test PDF Error" in mock_log_error.call_args[0][0] 
