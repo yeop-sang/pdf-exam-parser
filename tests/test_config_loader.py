@@ -30,10 +30,16 @@ def test_load_config_custom_path_success(create_test_config):
     content = """
     problem_patterns:
       stream: 'custom_stream_pattern'
+      final: 'custom_final_pattern'
+    explanation_patterns:
+      sub_item: 'custom_sub_item_pattern'
+      first_item_delimiter: 'custom_first_item_delimiter'
+      item_split_delimiter: 'custom_item_split_delimiter'
     """
     custom_config_path = create_test_config("custom.yaml", content)
     config = load_config(custom_config_path)
     assert config['problem_patterns']['stream'] == 'custom_stream_pattern'
+    assert config['explanation_patterns']['sub_item'] == 'custom_sub_item_pattern'
 
 def test_load_config_file_not_found():
     """
@@ -53,6 +59,48 @@ def test_load_config_yaml_error(create_test_config):
     with pytest.raises(yaml.YAMLError) as excinfo:
         load_config(malformed_config_path)
     assert "Error parsing YAML file" in str(excinfo.value)
+
+def test_load_config_validation_error_missing_section(create_test_config):
+    """
+    Tests that ValueError is raised if a main section is missing.
+    """
+    invalid_content = """
+    explanation_patterns:
+      sub_item: 'pattern'
+      first_item_delimiter: 'pattern'
+      item_split_delimiter: 'pattern'
+    """
+    invalid_config_path = create_test_config("invalid_main.yaml", invalid_content)
+    with pytest.raises(ValueError) as excinfo:
+        load_config(invalid_config_path)
+    assert "Missing required section 'problem_patterns'" in str(excinfo.value)
+
+def test_load_config_validation_error_missing_key(create_test_config):
+    """
+    Tests that ValueError is raised if a sub-key is missing.
+    """
+    invalid_content = """
+    problem_patterns:
+      stream: 'pattern'
+      # 'final' key is missing
+    explanation_patterns:
+      sub_item: 'pattern'
+      first_item_delimiter: 'pattern'
+      item_split_delimiter: 'pattern'
+    """
+    invalid_config_path = create_test_config("invalid_sub.yaml", invalid_content)
+    with pytest.raises(ValueError) as excinfo:
+        load_config(invalid_config_path)
+    assert "Missing required key 'final'" in str(excinfo.value)
+
+def test_load_config_empty_file(create_test_config):
+    """
+    Tests that ValueError is raised for an empty config file.
+    """
+    empty_path = create_test_config("empty.yaml", "")
+    with pytest.raises(ValueError) as excinfo:
+        load_config(empty_path)
+    assert "Config file is empty or invalid" in str(excinfo.value)
 
 def test_load_config_default_path_not_found(monkeypatch):
     """

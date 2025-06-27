@@ -147,7 +147,7 @@
               2
             ],
             "details": "Refactor the module to dynamically apply recognition rules from the configuration, replacing any hardcoded logic.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Test with various configurations to confirm correct rule application and fallback to defaults if needed."
           },
           {
@@ -158,7 +158,7 @@
               2
             ],
             "details": "Extend the CLI to accept a configuration file path and validate the file's structure and required fields before loading.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Test CLI with valid, invalid, and missing configuration files to ensure proper error messages and fallback behavior."
           }
         ]
@@ -179,7 +179,7 @@
     ],
     "metadata": {
       "created": "2025-06-27T14:17:00.097Z",
-      "updated": "2025-06-27T15:52:31.329Z",
+      "updated": "2025-06-27T15:55:16.242Z",
       "description": "Tasks for master context"
     }
   }

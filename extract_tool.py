@@ -22,6 +22,7 @@ def main():
     parser = argparse.ArgumentParser(description="Extract problems and explanations from a PDF file.")
     parser.add_argument("pdf_path", help="The path to the input PDF file.")
     parser.add_argument("output_path", help="The path to the output CSV file.")
+    parser.add_argument("--config", help="Path to a custom YAML configuration file.", default=None)
     parser.add_argument("--preprocess", action="store_true", help="Enable text preprocessing.")
     args = parser.parse_args()
 
@@ -30,7 +31,7 @@ def main():
     try:
         # Step 0: Load configuration
         logging.info("Step 1/4: Loading configuration...")
-        config = load_config() # Using default config path
+        config = load_config(args.config) # Pass custom path if provided
 
         # Step 1: Extract text from PDF page by page
         logging.info("Step 2/4: Creating text stream from PDF...")

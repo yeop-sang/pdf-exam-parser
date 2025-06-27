@@ -129,3 +129,25 @@ def test_main_flow_error_handling(mock_extract_pages, mock_analyze_text, mock_sa
         mock_extract_pages.assert_not_called()
         mock_analyze_text.assert_not_called()
         mock_save_to_csv.assert_not_called()
+
+@patch('extract_tool.load_config')
+@patch('extract_tool.argparse.ArgumentParser')
+@patch('extract_tool.save_to_csv')
+@patch('extract_tool.analyze_text')
+@patch('extract_tool.extract_pages')
+def test_main_flow_custom_config(mock_extract_pages, mock_analyze_text, mock_save_to_csv, mock_argparse, mock_load_config):
+    """
+    Tests that a custom config path is correctly passed to the loader.
+    """
+    mock_args = MagicMock()
+    mock_args.pdf_path = 'input.pdf'
+    mock_args.output_path = 'output.csv'
+    mock_args.preprocess = False
+    mock_args.config = 'custom_path.yaml' # Provide custom config path
+    mock_argparse.return_value.parse_args.return_value = mock_args
+
+    # --- Run main ---
+    main()
+
+    # --- Assertions ---
+    mock_load_config.assert_called_once_with('custom_path.yaml')
