@@ -1,0 +1,30 @@
+# Taskmaster - Default Configuration for PDF Crawler
+
+# This file contains the default regular expression patterns used for 
+# identifying and parsing problems and explanations from the text.
+# You can create a custom config file and pass it with the --config option.
+
+problem_patterns:
+  # Pattern to find a complete problem block that is followed by another problem.
+  # This is used for efficient, memory-safe streaming of the PDF text.
+  # It looks for a number, captures the title, the explanation body, and stops
+  # when it sees the next numbered line (without consuming it).
+  stream: '^(?P<number>\d+)\s+(?P<problem>.*?)\n(?P<explanation>.*?)(?=\n\d+\s)'
+
+  # Pattern to find the very last problem in the document.
+  # This is necessary because the last problem isn't followed by another one,
+  # so the 'stream' pattern would miss it. It looks for the end of the string (\Z).
+  final: '^(?P<number>\d+)\s+(?P<problem>.*?)\n(?P<explanation>.*?)(?=\n\d+\s|\Z)'
+
+explanation_patterns:
+  # Pattern to identify sub-items within an explanation block (e.g., ㄱ, ㄴ, ㄷ).
+  # This helps to structure the explanation into a main body and a list of items.
+  sub_item: '^(?P<label>[ㄱ-ㅎ])\s*\.\s*(?P<text>.*)'
+
+  # Pattern to find where the first sub-item starts.
+  # This is used to separate the main explanation body from the list of sub-items.
+  first_item_delimiter: '\n(?=[ㄱ-ㅎ]\s*\.)'
+  
+  # Pattern used to split the block of all sub-items into individual items.
+  # It splits the text right before the next sub-item label (e.g., before 'ㄴ.').
+  item_split_delimiter: '\n(?=[ㄱ-ㅎ]\s*\.)' 

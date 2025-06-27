@@ -117,8 +117,51 @@
           5,
           8
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design and Create Default Configuration File",
+            "description": "Develop a default configuration file (in JSON or YAML format) containing the initial set of question/explanation recognition rules.",
+            "dependencies": [],
+            "details": "Define the schema and structure for the configuration file, ensuring it is extensible and well-documented. Populate it with representative recognition rules as defaults.",
+            "status": "done",
+            "testStrategy": "Validate the file against the schema and ensure it loads correctly with sample data."
+          },
+          {
+            "id": 2,
+            "title": "Implement Configuration Loader Module",
+            "description": "Develop a module to load and parse the configuration file, supporting both JSON and YAML formats.",
+            "dependencies": [
+              1
+            ],
+            "details": "Ensure the loader can handle file reading, format detection, and error handling for missing or malformed files.",
+            "status": "in-progress",
+            "testStrategy": "Unit test the loader with valid and invalid configuration files in both formats."
+          },
+          {
+            "id": 3,
+            "title": "Integrate Configuration with Text Analysis Module",
+            "description": "Modify the text analysis module to utilize the loaded configuration for question/explanation recognition.",
+            "dependencies": [
+              2
+            ],
+            "details": "Refactor the module to dynamically apply recognition rules from the configuration, replacing any hardcoded logic.",
+            "status": "pending",
+            "testStrategy": "Test with various configurations to confirm correct rule application and fallback to defaults if needed."
+          },
+          {
+            "id": 4,
+            "title": "Add Command-Line Option and Configuration Validation",
+            "description": "Implement a command-line option to specify a custom configuration file and add validation for configuration format and content.",
+            "dependencies": [
+              2
+            ],
+            "details": "Extend the CLI to accept a configuration file path and validate the file's structure and required fields before loading.",
+            "status": "pending",
+            "testStrategy": "Test CLI with valid, invalid, and missing configuration files to ensure proper error messages and fallback behavior."
+          }
+        ]
       },
       {
         "id": 10,
@@ -130,13 +173,13 @@
         "dependencies": [
           5
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-06-27T14:17:00.097Z",
-      "updated": "2025-06-27T15:31:43.599Z",
+      "updated": "2025-06-27T15:51:07.419Z",
       "description": "Tasks for master context"
     }
   }
