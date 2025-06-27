@@ -1,24 +1,40 @@
 import csv
-from typing import List
-from dataclasses import asdict
-from modules.text_analyzer import ExtractedItem
+from typing import Dict, Iterator
 
-def save_to_csv(data: List[ExtractedItem], output_path: str) -> None:
+def save_to_csv(data_iterator: Iterator[Dict[str, str]], output_path: str):
     """
-    Saves a list of ExtractedItem objects to a CSV file.
+    Saves a stream of extracted items to a CSV file.
+
+    Args:
+        data_iterator: An iterator of dictionaries, where each dictionary
+                       represents an item with 'number', 'problem', and 'explanation'.
+        output_path: The path to the output CSV file.
     """
-    if not data:
-        # If data is empty, just write the header
-        with open(output_path, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(["problem_number", "problem_text", "explanation_text"])
+    if not output_path.lower().endswith('.csv'):
+        output_path += '.csv'
+        
+    # Use a temporary list to get headers, assuming all dicts have the same keys.
+    # This is a trade-off for not knowing the headers in advance with a pure iterator.
+    try:
+        first_item = next(data_iterator)
+    except StopIteration:
+        # Handle empty iterator case
+        with open(output_path, 'w', newline='', encoding='utf-8-sig') as csvfile:
+            # You might want to write just headers even for an empty file
+            fieldnames = ['number', 'problem', 'explanation']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
         return
-        
-    with open(output_path, 'w', newline='', encoding='utf-8') as f:
-        # Use the fields from the first item's dataclass definition as headers
-        headers = [field for field in asdict(data[0])]
-        writer = csv.DictWriter(f, fieldnames=headers)
-        
+
+    fieldnames = first_item.keys()
+
+    with open(output_path, 'w', newline='', encoding='utf-8-sig') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
-        for item in data:
-            writer.writerow(asdict(item)) 
+        
+        # Write the first item we already retrieved
+        writer.writerow(first_item)
+        
+        # Write the rest of the items from the iterator
+        for item in data_iterator:
+            writer.writerow(item) 

@@ -1,6 +1,6 @@
 import argparse
 import logging
-from modules.pdf_extractor import extract_text
+from modules.pdf_extractor import extract_pages
 from modules.text_analyzer import analyze_text
 from modules.csv_generator import save_to_csv
 
@@ -25,27 +25,21 @@ def main():
     logging.info(f"Processing {args.pdf_path}...")
 
     try:
-        # Step 1: Extract text from PDF
-        logging.info("Step 1/3: Extracting text from PDF...")
-        text = extract_text(args.pdf_path)
+        # Step 1: Extract text from PDF page by page
+        logging.info("Step 1/3: Creating text stream from PDF...")
+        page_stream = extract_pages(args.pdf_path)
+
+        # Step 2: Analyze the stream to find items
+        logging.info("Step 2/3: Analyzing text stream...")
+        extracted_items_stream = analyze_text(page_stream)
+
+        # Step 3: Save the stream of items to CSV
+        logging.info(f"Step 3/3: Saving items to {args.output_path}...")
+        save_to_csv(extracted_items_stream, args.output_path)
+
     except Exception as e:
-        logging.error(f"Error during PDF extraction: {e}")
+        logging.error(f"An error occurred during processing: {e}")
         return
-
-    if not text:
-        logging.warning("No text could be extracted from the PDF. Exiting.")
-        return
-
-    # Step 2: Analyze text to find items
-    logging.info("Step 2/3: Analyzing text...")
-    extracted_items = analyze_text(text)
-    if not extracted_items:
-        logging.warning("No items could be analyzed from the text. Exiting.")
-        return
-
-    # Step 3: Save to CSV
-    logging.info(f"Step 3/3: Saving {len(extracted_items)} items to {args.output_path}...")
-    save_to_csv(extracted_items, args.output_path)
 
     logging.info("Processing complete!")
 

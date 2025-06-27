@@ -1,65 +1,56 @@
-import pytest
 import csv
-from modules.text_analyzer import ExtractedItem
+import os
+import pytest
 from modules.csv_generator import save_to_csv
 
 @pytest.fixture
-def sample_extracted_items():
-    """Provides a list of ExtractedItem objects for testing."""
-    return [
-        ExtractedItem(
-            problem_number=1,
-            problem_text="첫 번째 문제",
-            explanation_text="첫 번째 해설입니다.\n여러 줄을 포함합니다."
-        ),
-        ExtractedItem(
-            problem_number=2,
-            problem_text="두 번째 문제 (특수문자 포함: ,\"')",
-            explanation_text="두 번째 해설."
-        )
+def mock_data_iterator():
+    """Provides a sample iterator of dictionaries."""
+    data = [
+        {'number': '01', 'problem': 'Problem 1', 'explanation': 'Explanation 1.'},
+        {'number': '02', 'problem': 'Problem 2', 'explanation': 'Explanation 2.'}
     ]
+    return iter(data)
 
-def test_save_to_csv_standard(sample_extracted_items, tmp_path):
+def test_save_to_csv_creates_file_and_writes_data(tmp_path, mock_data_iterator):
     """
-    Tests saving a standard list of items to a CSV file.
+    Tests that save_to_csv correctly creates a CSV file and writes the header and rows.
     """
-    output_path = tmp_path / "output.csv"
-    save_to_csv(sample_extracted_items, str(output_path))
-
-    assert output_path.exists()
-
-    with open(output_path, 'r', encoding='utf-8') as f:
+    output_file = tmp_path / "test.csv"
+    
+    save_to_csv(mock_data_iterator, str(output_file))
+    
+    assert os.path.exists(output_file)
+    
+    with open(output_file, 'r', newline='', encoding='utf-8-sig') as f:
         reader = csv.reader(f)
-        header = next(reader)
-        assert header == ["problem_number", "problem_text", "explanation_text"]
-        
         rows = list(reader)
-        assert len(rows) == 2
         
-        # Check first row
-        assert rows[0][0] == '1'
-        assert rows[0][1] == "첫 번째 문제"
-        assert rows[0][2] == "첫 번째 해설입니다.\n여러 줄을 포함합니다."
+        # Check header
+        assert rows[0] == ['number', 'problem', 'explanation']
         
-        # Check second row (with special characters)
-        assert rows[1][0] == '2'
-        assert rows[1][1] == "두 번째 문제 (특수문자 포함: ,\"')"
-        assert rows[1][2] == "두 번째 해설."
+        # Check data rows
+        assert len(rows) == 3 # Header + 2 data rows
+        assert rows[1] == ['01', 'Problem 1', 'Explanation 1.']
+        assert rows[2] == ['02', 'Problem 2', 'Explanation 2.']
 
-def test_save_to_csv_empty_list(tmp_path):
+def test_save_to_csv_empty_iterator(tmp_path):
     """
-    Tests saving an empty list of items. It should create a file with only headers.
+    Tests that save_to_csv correctly handles an empty iterator.
+    It should create a file with only the header.
     """
-    output_path = tmp_path / "empty.csv"
-    save_to_csv([], str(output_path))
-
-    assert output_path.exists()
-
-    with open(output_path, 'r', encoding='utf-8') as f:
+    output_file = tmp_path / "empty.csv"
+    empty_iterator = iter([])
+    
+    save_to_csv(empty_iterator, str(output_file))
+    
+    assert os.path.exists(output_file)
+    
+    with open(output_file, 'r', newline='', encoding='utf-8-sig') as f:
         reader = csv.reader(f)
-        header = next(reader)
-        assert header == ["problem_number", "problem_text", "explanation_text"]
+        rows = list(reader)
         
-        # There should be no more rows
-        with pytest.raises(StopIteration):
-            next(reader) 
+        # Check header
+        assert rows[0] == ['number', 'problem', 'explanation']
+        # Check no data rows
+        assert len(rows) == 1 

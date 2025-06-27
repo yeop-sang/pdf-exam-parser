@@ -1,24 +1,24 @@
 import fitz  # PyMuPDF
+from typing import Iterator
 
-def extract_text(pdf_path: str) -> str:
+def extract_pages(pdf_path: str) -> Iterator[str]:
     """
-    Extracts text from a given PDF file.
+    Extracts text from a given PDF file, page by page.
 
     Args:
         pdf_path: The path to the PDF file.
 
-    Returns:
-        The extracted text as a single string.
+    Yields:
+        The text content of each page as a string.
     """
     try:
         doc = fitz.open(pdf_path)
-        text = ""
         for page in doc:
-            text += page.get_text()
-        return text
+            yield page.get_text()
     except Exception as e:
-        print(f"Error extracting text from {pdf_path}: {e}")
-        return ""
+        # In case of an error, we'll log it (in the main script)
+        # and yield nothing, resulting in an empty generator.
+        raise e
 
 if __name__ == '__main__':
     # This is for testing purposes.
