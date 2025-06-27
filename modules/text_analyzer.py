@@ -1,34 +1,25 @@
 import re
 from typing import Dict, Iterator, Any, List
+from modules.config_loader import load_config
 
-# Pre-compile regex for efficiency.
-# This pattern finds a line starting with a number and captures everything
-# until the next line that starts with a number. It's used for streaming.
-# The lookahead `(?=\n\d+\s)` is key. We don't include `|\Z` here because
-# in a streaming context, `\Z` (end of string) is premature.
-STREAM_PATTERN = re.compile(
-    r'^(?P<number>\d+)\s+(?P<problem>.*?)\n(?P<explanation>.*?)(?=\n\d+\s)', 
-    re.MULTILINE | re.DOTALL
-)
+# Patterns are now loaded from config, so global pre-compilation is removed.
 
-# This pattern is for the final part of the text, which might not be 
-# followed by another problem number. It's used on the remainder buffer.
-FINAL_PATTERN = re.compile(
-    r'^(?P<number>\d+)\s+(?P<problem>.*?)\n(?P<explanation>.*?)(?=\n\d+\s|\Z)', 
-    re.MULTILINE | re.DOTALL
-)
+def _parse_explanation(full_explanation: str, config: Dict[str, Any]) -> Dict[str, Any]:
+    """Parses a full explanation block into a body and structured items using patterns from config."""
+    
+    exp_patterns = config.get('explanation_patterns', {})
+    first_item_delimiter = exp_patterns.get('first_item_delimiter')
+    item_split_delimiter = exp_patterns.get('item_split_delimiter')
+    sub_item_pattern_str = exp_patterns.get('sub_item')
 
-# Pattern to find sub-items like ㄱ, ㄴ, ㄷ.
-SUB_ITEM_PATTERN = re.compile(
-    r'^(?P<label>[ㄱ-ㅎ])\s*\.\s*(?P<text>.*)', 
-    re.MULTILINE | re.DOTALL
-)
+    if not all([first_item_delimiter, item_split_delimiter, sub_item_pattern_str]):
+        # Fallback or error if patterns are missing
+        return {'body': full_explanation.strip(), 'explanation_items': []}
 
+    SUB_ITEM_PATTERN = re.compile(sub_item_pattern_str, re.MULTILINE | re.DOTALL)
 
-def _parse_explanation(full_explanation: str) -> Dict[str, Any]:
-    """Parses a full explanation block into a body and structured items."""
     # Find the start of the first sub-item to separate body from items
-    first_item_match = re.search(r'\n(?=[ㄱ-ㅎ]\s*\.)', full_explanation)
+    first_item_match = re.search(first_item_delimiter, full_explanation)
     
     if first_item_match:
         body_end_index = first_item_match.start()
@@ -41,7 +32,7 @@ def _parse_explanation(full_explanation: str) -> Dict[str, Any]:
     explanation_items: List[Dict[str, str]] = []
     if items_text_block:
         # Split the block into individual items based on the start of the next item
-        item_texts = re.split(r'\n(?=[ㄱ-ㅎ]\s*\.)', items_text_block)
+        item_texts = re.split(item_split_delimiter, items_text_block)
         for item_text in item_texts:
             if not item_text.strip():
                 continue
@@ -57,30 +48,36 @@ def _parse_explanation(full_explanation: str) -> Dict[str, Any]:
     return {'body': body, 'explanation_items': explanation_items}
 
 
-def analyze_text(text_iterator: Iterator[str]) -> Iterator[Dict[str, Any]]:
+def analyze_text(text_iterator: Iterator[str], config: Dict[str, Any]) -> Iterator[Dict[str, Any]]:
     """
-    Analyzes a stream of text page by page to extract problems and their explanations.
-    An item consists of a number, a title on the same line, and the
-    content that follows until the next numbered title.
+    Analyzes a stream of text page by page using regex patterns from the config.
     Handles items that may span across page breaks in a memory-efficient way.
 
     Args:
         text_iterator: An iterator that yields text for each page.
+        config: A dictionary containing the regex patterns.
 
     Yields:
-        A dictionary for each found item, containing 'number', 'title', 'body', 
-        and 'explanation_items'.
+        A dictionary for each found item.
     """
+    prob_patterns = config.get('problem_patterns', {})
+    stream_pattern_str = prob_patterns.get('stream')
+    final_pattern_str = prob_patterns.get('final')
+
+    if not stream_pattern_str or not final_pattern_str:
+        raise ValueError("Configuration must contain 'stream' and 'final' problem patterns.")
+
+    STREAM_PATTERN = re.compile(stream_pattern_str, re.MULTILINE | re.DOTALL)
+    FINAL_PATTERN = re.compile(final_pattern_str, re.MULTILINE | re.DOTALL)
+    
     buffer = ""
     for page_text in text_iterator:
         buffer += page_text
         
         last_match_end = 0
-        # Find all problems in the buffer that are guaranteed to be complete
-        # because they are followed by another problem number.
         for match in STREAM_PATTERN.finditer(buffer):
             data = match.groupdict()
-            parsed_explanation = _parse_explanation(data['explanation'])
+            parsed_explanation = _parse_explanation(data['explanation'], config)
             
             yield {
                 "number": data['number'].strip(),
@@ -90,17 +87,13 @@ def analyze_text(text_iterator: Iterator[str]) -> Iterator[Dict[str, Any]]:
             }
             last_match_end = match.end()
 
-        # Trim the buffer, keeping only the part that hasn't been processed.
-        # This part might contain an incomplete problem.
         if last_match_end > 0:
             buffer = buffer[last_match_end:]
 
-    # After processing all pages, parse the remaining buffer.
-    # This will catch the very last item in the document.
     if buffer:
         for match in FINAL_PATTERN.finditer(buffer):
             data = match.groupdict()
-            parsed_explanation = _parse_explanation(data['explanation'])
+            parsed_explanation = _parse_explanation(data['explanation'], config)
 
             yield {
                 "number": data['number'].strip(),
@@ -110,7 +103,11 @@ def analyze_text(text_iterator: Iterator[str]) -> Iterator[Dict[str, Any]]:
             }
 
 if __name__ == '__main__':
-    sample_text = """
+    # Main block is now for demonstration and requires a config.
+    # It will load the default config to run.
+    try:
+        config = load_config() # Assumes default config is in the correct path
+        sample_text = """
 01 생물의 특성
 석회 동굴에서 발견되는 석순, 석주, 종유석은 탄산 칼슘 성분이
 쌓여 만들어진 지형이므로 생물이 아니다.
@@ -137,19 +134,24 @@ if __name__ == '__main__':
 분석하여 규칙성을 발견하고, 이로부터 일반적인 원리나 법칙을
 이끌어내는 탐구 방법이다.
 """
-    
-    items = analyze_text(iter([sample_text]))
-    print(f"Found {len(list(items))} items.") # Re-listing consumes the iterator, so we need to be careful
-    
-    # To print items, we need to re-create the iterator
-    items_to_print = analyze_text(iter([sample_text]))
-    for item in items_to_print:
-        print("--- ITEM ---")
-        print(f"번호: {item['number']}")
-        print(f"문제(제목): {item['title']}")
-        print(f"본문:\n{item['body']}\n")
-        if item.get('explanation_items'):
-            print("해설 항목:")
-            for sub_item in item['explanation_items']:
-                print(f"  {sub_item['label']}. {sub_item['text']}")
-        print() 
+        
+        items = analyze_text(iter([sample_text]), config)
+        # Iterators are single-use, so convert to list to count and then re-create to print
+        items_list = list(items)
+        print(f"Found {len(items_list)} items.") 
+        
+        # To print items, we use the collected list
+        for item in items_list:
+            print("--- ITEM ---")
+            print(f"번호: {item['number']}")
+            print(f"문제(제목): {item['title']}")
+            print(f"본문:\n{item['body']}\n")
+            if item.get('explanation_items'):
+                print("해설 항목:")
+                for sub_item in item['explanation_items']:
+                    print(f"  {sub_item['label']}. {sub_item['text']}")
+            print()
+            
+    except (FileNotFoundError, ValueError) as e:
+        print(f"Error for __main__ execution: {e}")
+        print("Please ensure 'config/default_config.yaml' exists and is valid.") 

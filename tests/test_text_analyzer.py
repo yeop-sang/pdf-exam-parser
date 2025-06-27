@@ -2,6 +2,21 @@ import pytest
 from modules.text_analyzer import analyze_text
 
 @pytest.fixture
+def mock_config():
+    """Provides a mock config dictionary for testing."""
+    return {
+        "problem_patterns": {
+            "stream": r'^(?P<number>\d+)\s+(?P<problem>.*?)\n(?P<explanation>.*?)(?=\n\d+\s)',
+            "final": r'^(?P<number>\d+)\s+(?P<problem>.*?)\n(?P<explanation>.*?)(?=\n\d+\s|\Z)'
+        },
+        "explanation_patterns": {
+            "sub_item": r'^(?P<label>[ㄱ-ㅎ])\s*\.\s*(?P<text>.*)',
+            "first_item_delimiter": r'\n(?=[ㄱ-ㅎ]\s*\.)',
+            "item_split_delimiter": r'\n(?=[ㄱ-ㅎ]\s*\.)'
+        }
+    }
+
+@pytest.fixture
 def realistic_data():
     """Uses realistic data provided by the user."""
     return """
@@ -32,12 +47,12 @@ def realistic_data():
 이끌어내는 탐구 방법이다.
 """
 
-def test_analyze_text_realistic_single_page(realistic_data):
+def test_analyze_text_realistic_single_page(realistic_data, mock_config):
     """
     Tests analysis with realistic data format on a single page.
     """
     text_iterator = iter([realistic_data])
-    result = list(analyze_text(text_iterator))
+    result = list(analyze_text(text_iterator, mock_config))
 
     assert len(result) == 3
 
@@ -61,7 +76,7 @@ def test_analyze_text_realistic_single_page(realistic_data):
     assert len(result[2]['explanation_items']) == 0
 
 
-def test_analyze_text_realistic_multi_page(realistic_data):
+def test_analyze_text_realistic_multi_page(realistic_data, mock_config):
     """
     Tests analysis with realistic data format split across multiple pages.
     """
@@ -71,7 +86,7 @@ def test_analyze_text_realistic_multi_page(realistic_data):
     page2 = realistic_data[split_point:]
     
     text_iterator = iter([page1, page2])
-    result = list(analyze_text(text_iterator))
+    result = list(analyze_text(text_iterator, mock_config))
 
     # The result should be identical to the single page test
     assert len(result) == 3
@@ -84,22 +99,22 @@ def test_analyze_text_realistic_multi_page(realistic_data):
     assert '모두 갖는 특징이다.' in result[1]['explanation_items'][2]['text'].replace('\n', '')
 
 
-def test_analyze_text_no_items():
+def test_analyze_text_no_items(mock_config):
     """
     Tests that an empty list is returned when no items are found.
     """
     text = "This is just some random text without any numbered problems."
     text_iterator = iter([text])
-    result = list(analyze_text(text_iterator))
+    result = list(analyze_text(text_iterator, mock_config))
     assert len(result) == 0
 
-def test_analyze_text_empty_input():
+def test_analyze_text_empty_input(mock_config):
     """Tests the function with empty pages."""
     text_iterator = iter(["", "   ", "\n"])
-    items = list(analyze_text(text_iterator))
+    items = list(analyze_text(text_iterator, mock_config))
     assert len(items) == 0
 
-def test_analyze_text_with_sub_items(realistic_data):
+def test_analyze_text_with_sub_items(realistic_data, mock_config):
     """
     Tests that the analyzer correctly parses sub-items (like ㄱ, ㄴ, ㄷ)
     from the explanation part.
@@ -110,7 +125,7 @@ def test_analyze_text_with_sub_items(realistic_data):
     # and the 'explanation' is now just the introduction.
     
     text_iterator = iter([realistic_data])
-    result = list(analyze_text(text_iterator))
+    result = list(analyze_text(text_iterator, mock_config))
 
     assert len(result) == 3
     

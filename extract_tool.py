@@ -4,6 +4,7 @@ from modules.pdf_extractor import extract_pages
 from modules.text_analyzer import analyze_text
 from modules.csv_generator import save_to_csv
 from modules.text_preprocessor import clean_text
+from modules.config_loader import load_config
 
 def main():
     """
@@ -27,8 +28,12 @@ def main():
     logging.info(f"Processing {args.pdf_path}...")
 
     try:
+        # Step 0: Load configuration
+        logging.info("Step 1/4: Loading configuration...")
+        config = load_config() # Using default config path
+
         # Step 1: Extract text from PDF page by page
-        logging.info("Step 1/3: Creating text stream from PDF...")
+        logging.info("Step 2/4: Creating text stream from PDF...")
         page_stream = extract_pages(args.pdf_path)
 
         # Optional Step: Preprocess the text stream
@@ -37,11 +42,11 @@ def main():
             page_stream = (clean_text(page) for page in page_stream)
 
         # Step 2: Analyze the stream to find items
-        logging.info("Step 2/3: Analyzing text stream...")
-        extracted_items_stream = analyze_text(page_stream)
+        logging.info("Step 3/4: Analyzing text stream...")
+        extracted_items_stream = analyze_text(page_stream, config)
 
         # Step 3: Save the stream of items to CSV
-        logging.info(f"Step 3/3: Saving items to {args.output_path}...")
+        logging.info(f"Step 4/4: Saving items to {args.output_path}...")
         save_to_csv(extracted_items_stream, args.output_path)
 
     except Exception as e:
