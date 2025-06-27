@@ -1,5 +1,5 @@
 import re
-from typing import Dict, Iterator
+from typing import Dict, Iterator, Any, List
 
 # Pre-compile regex for efficiency.
 # This pattern finds a line starting with a number and captures everything
@@ -18,8 +18,46 @@ FINAL_PATTERN = re.compile(
     re.MULTILINE | re.DOTALL
 )
 
+# Pattern to find sub-items like ㄱ, ㄴ, ㄷ.
+SUB_ITEM_PATTERN = re.compile(
+    r'^(?P<label>[ㄱ-ㅎ])\s*\.\s*(?P<text>.*)', 
+    re.MULTILINE | re.DOTALL
+)
 
-def analyze_text(text_iterator: Iterator[str]) -> Iterator[Dict[str, str]]:
+
+def _parse_explanation(full_explanation: str) -> Dict[str, Any]:
+    """Parses a full explanation block into a body and structured items."""
+    # Find the start of the first sub-item to separate body from items
+    first_item_match = re.search(r'\n(?=[ㄱ-ㅎ]\s*\.)', full_explanation)
+    
+    if first_item_match:
+        body_end_index = first_item_match.start()
+        body = full_explanation[:body_end_index].strip()
+        items_text_block = full_explanation[body_end_index:].strip()
+    else:
+        body = full_explanation.strip()
+        items_text_block = ""
+        
+    explanation_items: List[Dict[str, str]] = []
+    if items_text_block:
+        # Split the block into individual items based on the start of the next item
+        item_texts = re.split(r'\n(?=[ㄱ-ㅎ]\s*\.)', items_text_block)
+        for item_text in item_texts:
+            if not item_text.strip():
+                continue
+            
+            match = SUB_ITEM_PATTERN.match(item_text.strip())
+            if match:
+                data = match.groupdict()
+                explanation_items.append({
+                    'label': data['label'],
+                    'text': data['text'].strip()
+                })
+
+    return {'body': body, 'explanation_items': explanation_items}
+
+
+def analyze_text(text_iterator: Iterator[str]) -> Iterator[Dict[str, Any]]:
     """
     Analyzes a stream of text page by page to extract problems and their explanations.
     An item consists of a number, a title on the same line, and the
@@ -30,7 +68,8 @@ def analyze_text(text_iterator: Iterator[str]) -> Iterator[Dict[str, str]]:
         text_iterator: An iterator that yields text for each page.
 
     Yields:
-        A dictionary for each found item, containing 'number', 'problem', and 'explanation'.
+        A dictionary for each found item, containing 'number', 'title', 'body', 
+        and 'explanation_items'.
     """
     buffer = ""
     for page_text in text_iterator:
@@ -41,10 +80,13 @@ def analyze_text(text_iterator: Iterator[str]) -> Iterator[Dict[str, str]]:
         # because they are followed by another problem number.
         for match in STREAM_PATTERN.finditer(buffer):
             data = match.groupdict()
+            parsed_explanation = _parse_explanation(data['explanation'])
+            
             yield {
                 "number": data['number'].strip(),
-                "problem": data['problem'].strip(),
-                "explanation": data['explanation'].strip()
+                "title": data['problem'].strip(),
+                "body": parsed_explanation['body'],
+                "explanation_items": parsed_explanation['explanation_items']
             }
             last_match_end = match.end()
 
@@ -58,10 +100,13 @@ def analyze_text(text_iterator: Iterator[str]) -> Iterator[Dict[str, str]]:
     if buffer:
         for match in FINAL_PATTERN.finditer(buffer):
             data = match.groupdict()
+            parsed_explanation = _parse_explanation(data['explanation'])
+
             yield {
                 "number": data['number'].strip(),
-                "problem": data['problem'].strip(),
-                "explanation": data['explanation'].strip()
+                "title": data['problem'].strip(),
+                "body": parsed_explanation['body'],
+                "explanation_items": parsed_explanation['explanation_items']
             }
 
 if __name__ == '__main__':
@@ -101,5 +146,10 @@ if __name__ == '__main__':
     for item in items_to_print:
         print("--- ITEM ---")
         print(f"번호: {item['number']}")
-        print(f"문제(제목): {item['problem']}")
-        print(f"해설(내용):\n{item['explanation']}\n") 
+        print(f"문제(제목): {item['title']}")
+        print(f"본문:\n{item['body']}\n")
+        if item.get('explanation_items'):
+            print("해설 항목:")
+            for sub_item in item['explanation_items']:
+                print(f"  {sub_item['label']}. {sub_item['text']}")
+        print() 

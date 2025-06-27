@@ -5,10 +5,23 @@ from modules.csv_generator import save_to_csv
 
 @pytest.fixture
 def mock_data_iterator():
-    """Provides a sample iterator of dictionaries."""
+    """Provides a sample iterator of structured dictionaries."""
     data = [
-        {'number': '01', 'problem': 'Problem 1', 'explanation': 'Explanation 1.'},
-        {'number': '02', 'problem': 'Problem 2', 'explanation': 'Explanation 2.'}
+        {
+            'number': '01', 
+            'title': 'Problem 1', 
+            'body': 'This is the body of problem 1.',
+            'explanation_items': [
+                {'label': 'A', 'text': 'Choice A'},
+                {'label': 'B', 'text': 'Choice B'},
+            ]
+        },
+        {
+            'number': '02', 
+            'title': 'Problem 2', 
+            'body': 'This is the body of problem 2.',
+            'explanation_items': []
+        }
     ]
     return iter(data)
 
@@ -31,8 +44,14 @@ def test_save_to_csv_creates_file_and_writes_data(tmp_path, mock_data_iterator):
         
         # Check data rows
         assert len(rows) == 3 # Header + 2 data rows
-        assert rows[1] == ['01', 'Problem 1', 'Explanation 1.']
-        assert rows[2] == ['02', 'Problem 2', 'Explanation 2.']
+        
+        # Check first row (with explanation items)
+        expected_explanation1 = "This is the body of problem 1.\n\nA. Choice A\n\nB. Choice B"
+        assert rows[1] == ['01', 'Problem 1', expected_explanation1]
+        
+        # Check second row (without explanation items)
+        expected_explanation2 = "This is the body of problem 2."
+        assert rows[2] == ['02', 'Problem 2', expected_explanation2]
 
 def test_save_to_csv_empty_iterator(tmp_path):
     """

@@ -43,22 +43,22 @@ def test_analyze_text_realistic_single_page(realistic_data):
 
     # Check problem 1
     assert result[0]['number'] == '01'
-    assert result[0]['problem'] == '생물의 특성'
-    assert '석회 동굴에서' in result[0]['explanation']
-    assert '생장에 해당하지 않는다.' in result[0]['explanation'].replace('\n', '')
-    assert '02 세균과 바이러스' not in result[0]['explanation']
+    assert result[0]['title'] == '생물의 특성'
+    assert '석회 동굴에서' in result[0]['body']
+    assert len(result[0]['explanation_items']) == 3
+    assert '생장에 해당하지 않는다.' in result[0]['explanation_items'][2]['text']
 
     # Check problem 2
     assert result[1]['number'] == '02'
-    assert result[1]['problem'] == '세균과 바이러스'
-    assert '독립적으로 물질' in result[1]['explanation']
-    assert '모두 갖는 특징이다.' in result[1]['explanation'].replace('\n', '')
-    assert '03 귀납적 탐구 방법' not in result[1]['explanation']
+    assert result[1]['title'] == '세균과 바이러스'
+    assert '독립적으로 물질' in result[1]['body']
+    assert '모두 갖는 특징이다.' in result[1]['explanation_items'][2]['text'].replace('\n', '')
     
     # Check problem 3 (last one)
     assert result[2]['number'] == '03'
-    assert result[2]['problem'] == '귀납적 탐구 방법'
-    assert '이끌어내는 탐구 방법이다.' in result[2]['explanation'].replace('\n', '')
+    assert result[2]['title'] == '귀납적 탐구 방법'
+    assert '이끌어내는 탐구 방법이다.' in result[2]['body'].replace('\n', '')
+    assert len(result[2]['explanation_items']) == 0
 
 
 def test_analyze_text_realistic_multi_page(realistic_data):
@@ -78,10 +78,10 @@ def test_analyze_text_realistic_multi_page(realistic_data):
 
     # Check problem 2, which was split across the page boundary
     assert result[1]['number'] == '02'
-    assert result[1]['problem'] == '세균과 바이러스'
-    assert '독립적으로 물질' in result[1]['explanation'] # From page 1 part
-    assert '모두 갖는 특징이다.' in result[1]['explanation'].replace('\n', '') # From page 2 part
-    assert '03 귀납적 탐구 방법' not in result[1]['explanation']
+    assert result[1]['title'] == '세균과 바이러스'
+    assert '독립적으로 물질' in result[1]['body']
+    assert len(result[1]['explanation_items']) == 3
+    assert '모두 갖는 특징이다.' in result[1]['explanation_items'][2]['text'].replace('\n', '')
 
 
 def test_analyze_text_no_items():
@@ -97,4 +97,40 @@ def test_analyze_text_empty_input():
     """Tests the function with empty pages."""
     text_iterator = iter(["", "   ", "\n"])
     items = list(analyze_text(text_iterator))
-    assert len(items) == 0 
+    assert len(items) == 0
+
+def test_analyze_text_with_sub_items(realistic_data):
+    """
+    Tests that the analyzer correctly parses sub-items (like ㄱ, ㄴ, ㄷ)
+    from the explanation part.
+    """
+    # This test assumes a new, more structured output format.
+    # We expect the dictionary to be reworked.
+    # For now, let's assume we are adding a new key 'sub_items' to the existing dict
+    # and the 'explanation' is now just the introduction.
+    
+    text_iterator = iter([realistic_data])
+    result = list(analyze_text(text_iterator))
+
+    assert len(result) == 3
+    
+    problem1 = result[0]
+    
+    # Let's define the expected new structure for the first item
+    assert problem1['number'] == '01'
+    assert problem1['title'] == '생물의 특성'
+    assert '지형이므로 생물이 아니다.' in problem1['body']
+    assert 'ㄱ.' not in problem1['body'] # The body should not contain the items
+    
+    assert 'explanation_items' in problem1
+    items = problem1['explanation_items']
+    assert len(items) == 3
+    
+    assert items[0]['label'] == 'ㄱ'
+    assert '물질대사가 일어나지 않는다.' in items[0]['text']
+    
+    assert items[1]['label'] == 'ㄴ'
+    assert '튤립이 갖는 특징' in items[1]['text']
+    
+    assert items[2]['label'] == 'ㄷ'
+    assert '생장에 해당하지 않는다.' in items[2]['text'] 
